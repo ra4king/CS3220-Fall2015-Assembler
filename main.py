@@ -39,24 +39,103 @@ print("System registers: \n  %s" % "\n  ".join(sorted(["%s: %d" % (r, n) for r, 
 print
 
 
-class Instruction:
-    def __init__(self, op, arg1=None, arg2=None, arg3=None):
-        self._op = op
-        self._args = [arg for arg in [arg1, arg2, arg3] if arg != None]
+# Superclass for Instruction and 
+class Statement:
+    def __init__(self):
+        self._word_address = None
 
+    # Word address of the statement as an int
     @property
-    def args(self):
-        return self._args
+    def word_address(self):
+        return self._word_address
+    @word_address.setter
+    def word_address(self, value):
+        if value != None and not isinstance(value, int):
+            raise TypeError("Word address must be an int")
+        self._word_address = value
+
+    # Returns a string containing the output "mif" format.  Does not include a
+    # leading or trailing newline.
+    # 
+    # @param labels A dictionary mapping label names to values
+    def generate_output_code(self, labels={}):
+        raise NotImplementedError()
+
+
+# Abstract superclass for the different instruction types.
+class Instruction(Statement):
+    def __init__(self, op, args=[]):
+        super().__init__(self)
+        self._op = op
+        self._args = args
 
     @property
     def op(self):
         return self._op
 
+    @property
+    def args(self):
+        return self._args
+
     def __str__(self):
-        return "Instruction(%s: %s) %r" % (self.op, str(self.args), self.arg3Imm)
+        return "Instruction(%s: %s)" % (self.op, str(self.args))
 
     def __repr__(self):
         return str(self)
+
+
+# InstructionImmReg    - CALL imm(R1)
+class InstructionImmReg(Instruction):
+    def generate_output_code(self, labels):
+        raise NotImplementedError()
+
+# InstructionReg3      - ADD RD, RS1, RS2
+class InstructionReg3(Instruction):
+    def generate_output_code(self, labels):
+        raise NotImplementedError()
+
+# InstructionReg2Imm   - ADDI RD, RS1, imm;  LW RD, imm(RS1)
+class InstructionReg2Im(Instruction):
+    def generate_output_code(self, labels):
+        raise NotImplementedError()
+
+# InstructionRegImm    - MVHI RD, imm
+class InstructionRegImm(Instruction):
+    def generate_output_code(self, labels):
+        raise NotImplementedError()
+
+# InstructionImm       - BR imm
+class InstructionImm(Instruction):
+    def generate_output_code(self, labels):
+        raise NotImplementedError()
+
+# InstructionReg2      - NOT RD, RS
+class InstructionReg2(Instruction):
+    def generate_output_code(self, labels):
+        raise NotImplementedError()
+
+
+
+# Produce final output code.
+#
+# @param statements A list of Instruction and WordStatement objects with their
+#        word_address set correctly.  All immediate values will be labels or
+#        hex strings without the leading '0x'.
+# @param labels Name, value pairs from all labels and .NAME statements
+# @return A string containing the formatted output mif code.
+def generate_output(statements, labels={}):
+    # file header
+    result = """WIDTH=32;
+DEPTH=2048;
+ADDRESS_RADIX=HEX;
+DATA_RADIX=HEX;
+CONTENT BEGIN
+[00000000..0000000f] : DEAD"""
+
+    result += "\n" + "\n".join([stmt.generate_output_code(labels) for stmt in statements])
+    result += "\n"
+
+    return result;
 
 
 def create_label_parser():
