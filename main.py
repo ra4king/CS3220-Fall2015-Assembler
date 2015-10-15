@@ -40,10 +40,9 @@ print
 
 
 class Instruction:
-    def __init__(self, op, arg1=None, arg2=None, arg3=None, arg3Imm=False):
+    def __init__(self, op, arg1=None, arg2=None, arg3=None):
         self._op = op
         self._args = [arg for arg in [arg1, arg2, arg3] if arg != None]
-        self.arg3Imm = arg3Imm
 
     @property
     def args(self):
@@ -60,43 +59,110 @@ class Instruction:
         return str(self)
 
 
-def create_parser():
+def create_label_parser():
     label = r'(\w+):'
-    opcode = r'([a-zA-Z]+)'
-    reg = '(' + '|'.join(zip(*REGISTERS.items())[0]) + ')'
-    imm = r'(\d+)|(0x[0-9a-fA-F]+)|(\w+)'
+    return re.compile(label)
 
-    instr = '^\s*(?:' + label + r'\s*)?' + opcode + r'\s+' + reg + r',\s*' + reg + r',\s*' + '(?:' + reg + '|' + imm + r')\s*$'
-    print instr
-    print
+opcode = r'([A-Z]+)'
+reg = '(' + '|'.join(zip(*REGISTERS.items())[0]) + ')'
+imm = r'(0x[0-9A-F]+)|(-?\d+)|(\w+)'
 
-    # ^\s*(?:(\w+):\s*)?([a-zA-Z]+)\s+(R\d),\s*(?:(R\d),\s*)?(?:(R\d)|(\d+)|(0x[0-9a-fA-F]+)|(\w+))?\s*(?:;.*)?$
+# handles 3 regs, 2 regs + imm, 1 reg + imm
+def create_instr_regs_parser():
+    instr = r'^' + opcode + r'\s+' + reg + r'(?:,\s*' + reg + r')?,\s*' + r'(?:' + reg + r'|' + imm + r')$'
+    return re.compile(instr, re.I)
 
-    return re.compile(instr)
+# handles reg, imm(reg)
+def create_instr_addr_parser():
+    instr = r'^' + opcode + r'\s+(?:' + reg + r',\s*)?(?:' + imm + r')\s*\(\s*' + reg + r'\s*\)$'
+    return re.compile(instr, re.I)
 
-def strip_comments(lines):
-    return [l for l in [l.split(';')[0] for l in lines] if l]
+def create_instr_br_parser():
+    instr = r'^BR\s*(?:' + imm + ')$'
+    return re.compile(instr, re.I)
 
-def main():
-    parser = create_parser()
-    input = "; i'm a comment\nHELLO:ADD R0, R1, R3\nADD R2, R1, HELLO; hello!\nAND R4, RA, 4452"
-    print "Input:\n%s\n" % input
-    lines = strip_comments(input.split('\n'))
-    result = zip(lines, [parser.match(l) for l in lines])
-    
-    for r, i in zip(result, range(len(result))):
-        if not r[1]:
-            raise Exception("Error with line %d: %s" % (i + 1, r[0]))
+def create_directive_parser():
+    directive = r'^\s*\.(?:ORIG (?:(0x[0-9a-fA-F]+)|(\d+))|WORD (?:' + imm + r')|NAME (\w+)\s*=\s*(?:(0x[0-9a-fA-F]+)|(-?\d+)))\s*$'
+    return re.compile(directive, re.I)
 
-    print 'Num groups: %d' % parser.groups
+def clean(lines):
+    lines = [l.split(';')[0] for l in lines]
+    i = 0
+    while i < len(lines):
+        idx = lines[i].find(':')
+        if idx != -1:
+            lines.insert(i+1, lines[i][idx+1:])
+            lines[i] = lines[i][0:idx+1]
+        i += 1
+
+    return [l.strip() for l in lines if l.strip()]
+
+def assemble(fileIn, fileOut):
+    lines = clean([l for l in open(fileIn)])
+    print repr(lines)
+
+    instr_regs_parser = create_instr_regs_parser()
+    instr_addr_parser = create_instr_addr_parser()
+    instr_br_parser = create_instr_br_parser()
+    label_parser = create_label_parser()
+    directive_parser = create_directive_parser()
+
+    result = []
+    for l, i in zip(lines, range(1, len(lines) + 1)):
+        match = instr_regs_parser.match(l)
+        if match:
+            result.append((0, match))
+            continue
+
+        match = instr_addr_parser.match(l)
+        if match:
+            result.append((1, match))
+            continue
+
+        match = instr_br_parser.match(l)
+        if match:
+            result.append((2, match))
+            continue
+
+        match = label_parser.match(l)
+        if match:
+            result.append((3, match))
+            continue
+
+        match = directive_parser.match(l)
+        if match:
+            result.append((4, match))
+            continue
+
+        match = re.match(r'^(RET)$', l, re.I)
+        if match:
+            result.append((5, match))
+            continue
+
+        raise Exception("Error with line %d: %s" % (i, l))
+
+    group_counts = [instr_regs_parser.groups, instr_addr_parser.groups, instr_br_parser.groups,
+                    label_parser.groups, directive_parser.groups, 1]
+    print "group counts:", repr(group_counts)
 
     #instructions = list(result)
-    for _, match in result:
-        for i in range(1, parser.groups+1):
+    for i, match in result:
+        print "Type %d:" % i,
+        for i in range(1, group_counts[i] + 1):
             if match.group(i):
                 print match.group(i),
             print "\t",
         print
 
 if __name__ == '__main__':
-    main()
+    import sys
+
+    if len(sys.argv) != 3:
+        print "Usage: assembler.py inputFile outputFile"
+        sys.exit(-1)
+
+    try:
+        assemble(sys.argv[1], sys.argv[2])
+    except Exception as e:
+        print "Something went wrong... ", repr(e)
+        sys.exit(-1)
