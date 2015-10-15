@@ -161,7 +161,7 @@ def create_instr_br_parser():
     return re.compile(instr, re.I)
 
 def create_directive_parser():
-    directive = r'^\s*\.(?:ORIG (?:(0x[0-9a-fA-F]+)|(\d+))|WORD (?:' + imm + r')|NAME (\w+)\s*=\s*(?:(0x[0-9a-fA-F]+)|(-?\d+)))\s*$'
+    directive = r'^\s*\.(?:ORIG\s+(?:(0x[0-9a-fA-F]+)|(\d+))|WORD\s+(?:' + imm + r')|NAME\s+(\w+)\s*=\s*(?:(0x[0-9a-fA-F]+)|(-?\d+)))\s*$'
     return re.compile(directive, re.I)
 
 def clean(lines):
