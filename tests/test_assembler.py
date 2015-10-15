@@ -5,8 +5,6 @@ import tempfile
 # main assembler module
 import main
 
-# import  nose
-
 
 EXAMPLES = ['Test2', 'Sorter2']
 
