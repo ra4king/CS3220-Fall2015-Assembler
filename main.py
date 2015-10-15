@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-from pyparsing import Word, alphas, alphanums, ZeroOrMore, Literal, OneOrMore, Regex
-
+import re
 
 ## Assembler specs given in the instructions pdf
 #
@@ -37,13 +36,14 @@ REGISTERS["SP"] = REGISTERS["R14"]
 REGISTERS["RA"] = REGISTERS["R15"]
 
 print("System registers: \n  %s" % "\n  ".join(sorted(["%s: %d" % (r, n) for r, n in REGISTERS.items()])))
-print()
+print
 
 
 class Instruction:
-    def __init__(self, op, arg1=None, arg2=None, arg3=None):
+    def __init__(self, op, arg1=None, arg2=None, arg3=None, arg3Imm=False):
         self._op = op
         self._args = [arg for arg in [arg1, arg2, arg3] if arg != None]
+        self.arg3Imm = arg3Imm
 
     @property
     def args(self):
@@ -54,53 +54,49 @@ class Instruction:
         return self._op
 
     def __str__(self):
-        return "Instruction(%s: %s)" % (self.op, str(self.args))
+        return "Instruction(%s: %s) %r" % (self.op, str(self.args), self.arg3Imm)
 
     def __repr__(self):
         return str(self)
 
 
 def create_parser():
-    opcode = Word(alphas)
+    label = r'(\w+):'
+    opcode = r'([a-zA-Z]+)'
+    reg = '(' + '|'.join(zip(*REGISTERS.items())[0]) + ')'
+    imm = r'(\d+)|(0x[0-9a-fA-F]+)|(\w+)'
 
-    reg = None
-    for name, num in REGISTERS.items():
-        if reg == None:
-            reg = Literal(name)
-        else:
-            reg = reg | Literal(name)
+    instr = '^\s*(?:' + label + r'\s*)?' + opcode + r'\s+' + reg + r',\s*' + reg + r',\s*' + '(?:' + reg + '|' + imm + r')\s*$'
+    print instr
+    print
 
+    # ^\s*(?:(\w+):\s*)?([a-zA-Z]+)\s+(R\d),\s*(?:(R\d),\s*)?(?:(R\d)|(\d+)|(0x[0-9a-fA-F]+)|(\w+))?\s*(?:;.*)?$
 
-    # hex_value = Literal('0x') + Word(alphanums)
-    # dec_value = Word(alphanums)
-    # imm_value = dec_value | hex_value
-    instr_r3 = (opcode + ' ' + reg + ' ' + reg).setParseAction(lambda s, l, t: Instruction(t[0], t[2], t[4]))
-    # instr_i = opcode + reg + reg + imm_value
+    return re.compile(instr)
 
-    # load_store_instr = (opcode + reg + )
-
-    comment = (Literal(';') + Regex(r'[^\n]*')).setParseAction(lambda s, l, t: {'comment': t[1]})
-
-    # instr = instr_r3 | instr_i
-    instr = instr_r3
-
-    statement = instr | comment
-    # statement = instr
-
-    prog = ZeroOrMore('\n') + statement + ZeroOrMore(OneOrMore('\n') + statement) + ZeroOrMore('\n')
-    prog.leaveWhitespace()
-
-    return prog
-
+def strip_comments(lines):
+    return [l for l in [l.split(';')[0] for l in lines] if l]
 
 def main():
     parser = create_parser()
-    # input = "; i'm a comment\nADD R0 R1\nADD R0 R1"
-    input = "ADD R0 R1\nADD R0 R1"
-    print("Input:\n%s" % input)
-    result = parser.parseString(input)
-    instructions = list(result)
-    print("Result:\n%s" % repr(result))
+    input = "; i'm a comment\nHELLO:ADD R0, R1, R3\nADD R2, R1, HELLO; hello!\nAND R4, RA, 4452"
+    print "Input:\n%s\n" % input
+    lines = strip_comments(input.split('\n'))
+    result = zip(lines, [parser.match(l) for l in lines])
+    
+    for r, i in zip(result, range(len(result))):
+        if not r[1]:
+            raise Exception("Error with line %d: %s" % (i + 1, r[0]))
+
+    print 'Num groups: %d' % parser.groups
+
+    #instructions = list(result)
+    for _, match in result:
+        for i in range(1, parser.groups+1):
+            if match.group(i):
+                print match.group(i),
+            print "\t",
+        print
 
 if __name__ == '__main__':
     main()
