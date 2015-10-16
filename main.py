@@ -180,7 +180,7 @@ OPCODES = {instr: hex(int(val.replace(' ', ''), 2))[2:].zfill(2) for instr, val 
 
 # Converts register name (lower or uppercase) to an 8-bit hex string (no leading '0x')
 def reg2hex(regname):
-    return int2hex(REGISTERS[regname.upper()], 2)
+    return int2hex(REGISTERS[regname], 2)
 
 
 def int2hex(val, numchars):
@@ -328,17 +328,17 @@ def parse_statements(lines):
             if value:
                 if match.group(3):
                     instrClass = InstructionReg2Imm
-                    args = [match.group(2), match.group(3), value]
+                    args = [match.group(2).upper(), match.group(3).upper(), value]
                 else:
                     instrClass = InstructionRegImm
-                    args = [match.group(2), value]
+                    args = [match.group(2).upper(), value]
             else:
                 if match.group(3):
                     instrClass = InstructionReg3
-                    args = [match.group(2), match.group(3), match.group(4)]
+                    args = [match.group(2).upper(), match.group(3).upper(), match.group(4).upper()]
                 else:
                     instrClass = InstructionReg2
-                    args = [match.group(2), match.group(4)]
+                    args = [match.group(2).upper(), match.group(4).upper()]
 
             statements.append(instrClass(l, match.group(1).upper(), args))
             continue
@@ -352,10 +352,10 @@ def parse_statements(lines):
 
             if match.group(2):
                 instrClass = InstructionReg2Imm
-                args = [match.group(2), match.group(6), value]
+                args = [match.group(2).upper(), match.group(6).upper(), value]
             else:
                 instrClass = InstructionRegImm
-                args = [match.group(6), value]
+                args = [match.group(6).upper(), value]
 
             statements.append(instrClass(l, match.group(1).upper(), args))
             continue
@@ -368,7 +368,11 @@ def parse_statements(lines):
 
         match = label_parser.match(l)
         if match:
-            statements.append(Label(l, match.group(1)))
+            label = match.group(1)
+            if label in REGISTERS or label in OPCODES:
+                raise Exception("Cannot use reserved keyword as label at statement %d: %s" % (i, l))
+
+            statements.append(Label(l, label))
             continue
 
         match = directive_parser.match(l)
@@ -381,7 +385,12 @@ def parse_statements(lines):
                 statements.append(Directive(l, '.WORD', [value]))
             else:
                 value = hex(int(match.group(7) or match.group(8), 0) & 0xffffffff)
-                statements.append(Directive(l, '.NAME', [match.group(6), value]))
+
+                name = match.group(6)
+                if name in REGISTERS or name in OPCODES:
+                    raise Exception("Cannot use reserved keyword as name at statement %d: %s" % (i, l))
+
+                statements.append(Directive(l, '.NAME', [name, value]))
 
             continue
 
@@ -430,7 +439,7 @@ def assign_addresses(statements):
     for s in statements:
         if isinstance(s, Directive):
             if s.op == '.ORIG':
-                current_address = int(s.args[0], 0)
+                current_address = int(int(s.args[0], 0) / 4)
             elif s.op == '.NAME':
                 labels[s.args[0]] = int(s.args[1], 0)
             elif s.op == '.WORD':
@@ -439,14 +448,14 @@ def assign_addresses(statements):
 
                 s.word_address = current_address
                 physical_statements.append(s)
-                current_address += 4
+                current_address += 1
         elif isinstance(s, Instruction):
             if current_address == None:
                 raise Exception("Instruction found before .ORIG %s" % str(s))
 
             s.word_address = current_address
             physical_statements.append(s)
-            current_address += 4
+            current_address += 1
         elif isinstance(s, Label):
             if current_address == None:
                 raise Exception("Label found before .ORIG %s" % str(s))
