@@ -320,7 +320,7 @@ def assign_addresses(statements):
                 labels[s.args[0]] = s.args[1]
             elif s.op == '.WORD':
                 if current_address == None:
-                    raise Exception("Instruction found before .ORIG %s" % str(s))
+                    raise Exception(".WORD directive found before .ORIG %s" % str(s))
 
                 s.word_address = current_address
                 physical_statements.append(s)
@@ -334,7 +334,7 @@ def assign_addresses(statements):
             current_address += 4
         elif isinstance(s, Label):
             if current_address == None:
-                raise Exception("Instruction found before .ORIG %s" % str(s))
+                raise Exception("Label found before .ORIG %s" % str(s))
 
             labels[s.label] = hex(current_address)
 
