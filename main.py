@@ -94,7 +94,7 @@ class Instruction(Statement):
         raise NotImplementedError()
 
     def generate_output_code(self, labels={}):
-        out = "-- @ 0x" + int2hex(self.word_address, 8) + " : " + self.op + "\t" + ', '.join(self.args)
+        out = "-- @ 0x" + int2hex(self.word_address, 8) + " : " + self.statement
         out += "\n"
         out += hex(self.word_address)[2:].zfill(8) + ' : ' + self.generate_iword(labels) + ';'
         return out
@@ -244,10 +244,10 @@ DEPTH=2048;
 ADDRESS_RADIX=HEX;
 DATA_RADIX=HEX;
 CONTENT BEGIN
-[00000000..0000000f] : DEAD"""
+[00000000..0000000f] : DEAD;"""
 
-    result += "\n" + "\n".join([stmt.generate_output_code(labels) for stmt in statements])
-    result += "\n"
+    result += "\n" + "\n".join([stmt.generate_output_code(labels) for stmt in statements]) + "\n"
+    result += "END;\n"
 
     return result
 
