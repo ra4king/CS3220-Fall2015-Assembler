@@ -275,7 +275,7 @@ def parse_statements(lines):
             statements.append(Instruction(l, 'RET'))
             continue
 
-        raise Exception("Syntax error on line %d: %s" % (i, l))
+        raise Exception("Syntax error at statement %d: %s" % (i, l))
 
     return statements
 
@@ -317,26 +317,26 @@ def assign_addresses(statements):
             if s.op == '.ORIG':
                 current_address = int(s.args[0], 0)
             elif s.op == '.NAME':
-                labels[s.args[0]] = s.args[1]
+                labels[s.args[0]] = int(s.args[1], 0)
             elif s.op == '.WORD':
                 if current_address == None:
                     raise Exception(".WORD directive found before .ORIG %s" % str(s))
 
-                s.word_address = hex(current_address)
+                s.word_address = current_address
                 physical_statements.append(s)
                 current_address += 4
         elif isinstance(s, Instruction):
             if current_address == None:
                 raise Exception("Instruction found before .ORIG %s" % str(s))
 
-            s.word_address = hex(current_address)
+            s.word_address = current_address
             physical_statements.append(s)
             current_address += 4
         elif isinstance(s, Label):
             if current_address == None:
                 raise Exception("Label found before .ORIG %s" % str(s))
 
-            labels[s.label] = hex(current_address)
+            labels[s.label] = current_address
 
     return (physical_statements, labels)
 
@@ -355,7 +355,7 @@ def assemble(fileIn, fileOut):
 
     print("\nLabels:")
     for l, v in labels.items():
-        print("0x%08x: %s" % (int(v, 0), l))
+        print("0x%08x: %s" % (v, l))
 
 if __name__ == '__main__':
     import sys
