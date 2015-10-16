@@ -179,7 +179,7 @@ def create_instr_br_parser():
     return re.compile(instr, re.I)
 
 def create_directive_parser():
-    directive = r'^\s*\.(?:ORIG\s+(?:(0x[0-9a-fA-F]+)|(-\d+))|WORD\s+(?:' + imm + r')|NAME\s+(\w+)\s*=\s*(?:(0x[0-9a-fA-F]+)|(-?\d+)))\s*$'
+    directive = r'^\s*\.(?:ORIG\s+(?:(0x[0-9a-fA-F]+)|(-?\d+))|WORD\s+(?:' + imm + r')|NAME\s+(\w+)\s*=\s*(?:(0x[0-9a-fA-F]+)|(-?\d+)))\s*$'
     return re.compile(directive, re.I)
 
 def clean(lines):
@@ -275,7 +275,7 @@ def parse_statements(lines):
             statements.append(Instruction(l, 'RET'))
             continue
 
-        raise Exception("Error with line %d: %s" % (i, l))
+        raise Exception("Syntax error on line %d: %s" % (i, l))
 
     return statements
 
@@ -367,6 +367,5 @@ if __name__ == '__main__':
     try:
         assemble(sys.argv[1], sys.argv[2])
     except Exception as e:
-        print("Something went wrong... ")
-        raise
+        print("Error occurred while assembling: %s" % str(e))
         sys.exit(-1)
