@@ -66,6 +66,7 @@ class Statement:
     def generate_output_code(self, labels={}):
         raise NotImplementedError()
 
+
 class Label(Statement):
     def __init__(self, statement, label):
         super().__init__(statement)
@@ -81,12 +82,19 @@ class Label(Statement):
     def __repr__(self):
         return __str__(self)
 
+
 # Abstract superclass for the different instruction types.
 class Instruction(Statement):
     def __init__(self, statement, op, args=[]):
         super().__init__(statement)
         self._op = op
         self._args = args
+
+    def generate_iword(self, labels):
+        raise NotImplementedError()
+
+    def generate_output_code(self, labels={}):
+        return "-- comment\n" + hex(self.word_address)[2:].zfill(8) + ' : ' + self.generate_iword(labels) + ';'
 
     @property
     def op(self):
@@ -102,36 +110,116 @@ class Instruction(Statement):
     def __repr__(self):
         return str(self)
 
+OPCODES = {
+    'ADD': "0000 0000",
+    'SUB': "0001 0000",
+    'AND':"0100 0000",
+    'OR':"0101 0000",
+    'XOR':"0110 0000",
+    'NAND':"1100 0000",
+    'NOR':"1101 0000",
+    'XNOR':"1110 0000",
+
+    'ADDI': "0000 1000",
+    'SUBI':  "0001 1000",
+    'ANDI':  "0100 1000",
+    'ORI':  "0101 1000",
+    'XORI':  "0110 1000",
+    'NANDI':  "1100 1000",
+    'NORI':  "1101 1000",
+    'XNORI':  "1110 1000",
+    'MVHI':   "1011 1000",
+
+    'LW':   "0000 1001",
+    'SW': "0000 0101",
+
+    'F': "0000 0010",
+    'EQ': "0001 0010",
+    'LT': "0010 0010",
+    'LTE': "0011 0010",
+    'T': "1000 0010",
+    'NE': "1001 0010",
+    'GTE': "1010 0010",
+    'GT': "1011 0010",
+
+    'FI': "0000 1010",
+    'EQI': "0001 1010",
+    'LTI': "0010 1010",
+    'LTEI': "0011 1010",
+    'TI': "1000 1010",
+    'NEI': "1001 1010",
+    'GTEI': "1010 1010",
+    'GTI': "1011 1010",
+
+    'BF': "0000 0110",
+    'BEQ': "0001 0110",
+    'BLT': "0010 0110",
+    'BLTE': "0011 0110",
+    'BEQZ': "0101 0110",
+    'BLTZ': "0110 0110",
+    'BLTEZ': "0111 0110",
+    'BT': "1000 0110",
+    'BNE': "1001 0110",
+    'BGTE': "1010 0110",
+    'BGT': "1011 0110",
+    'BNEZ': "1101 0110",
+    'BGTEZ': "1110 0110",
+    'BGTZ': "1111 0110",
+    'JAL': "0000 1011"
+}
+# remove spaces and convert to one hex byte (excluding the leading '0x')
+OPCODES = {instr: hex(int(val.replace(' ', ''), 2))[2:].zfill(2) for instr, val in OPCODES.items()}
+# print(OPCODES)
+
+
+def reg2hex(regname):
+    return int2hex(REGISTERS[regname], 2)
+
+def int2hex(val, numchars):
+    return hex(val)[2:].zfill(numchars)
+
+
 # InstructionReg3      - ADD RD, RS1, RS2
 class InstructionReg3(Instruction):
-    def generate_output_code(self, labels):
-        raise NotImplementedError()
+    def generate_iword(self, labels):
+        return ' '.join([reg2hex(self.args[i]) for i in range(3)]) + OPCODES[self.op]
 
 # InstructionReg2Imm   - ADDI RD, RS1, imm;  LW RD, imm(RS1)
-# DON'T FORGET SW RS2, imm(RS1) is stored BACKWARDS: RS1 RS2 imm[15:0]
+# TODO: DON'T FORGET SW RS2, imm(RS1) is stored BACKWARDS: RS1 RS2 imm[15:0]
 class InstructionReg2Imm(Instruction):
-    def generate_output_code(self, labels):
-        raise NotImplementedError()
+    def generate_iword(self, labels):
+        imm = self.args[2]
+        if imm[0:2] == '0x':
+            imm = imm[2:].zfill(4)
+        else:
+            imm = int2hex(labels[imm], 4)
+        print(self.args)
+        return ' '.join([reg2hex(self.args[i]) for i in range(2)]) + imm + OPCODES[self.op]
 
 # InstructionRegImm    - MVHI RD, imm
 class InstructionRegImm(Instruction):
-    def generate_output_code(self, labels):
-        raise NotImplementedError()
+    def generate_iword(self, labels):
+        return reg2hex(self.args[0]) + '00' + int2hex(labels[self.args[1]], 4) + OPCODES[self.op]
 
-# InstructionImm       - BR imm
+# # InstructionImm       - BR imm
 class InstructionImm(Instruction):
-    def generate_output_code(self, labels):
-        raise NotImplementedError()
+    pass
 
 # InstructionReg2      - NOT RD, RS
 class InstructionReg2(Instruction):
-    def generate_output_code(self, labels):
-        raise NotImplementedError()
+    pass
 
+
+# TODO: should this be a subclass of Statement instead?
 class Directive(Instruction):
-    def generate_output_code(self, labels):
-        raise NotImplementedError()
+    pass
 
+
+
+# def remove_labels(statements):
+#     return [stmt for stmt in statements if not isinstance(stmt, Label)]
+
+# def read_labels()
 
 
 # Produce final output code.
@@ -153,7 +241,7 @@ CONTENT BEGIN
     result += "\n" + "\n".join([stmt.generate_output_code(labels) for stmt in statements])
     result += "\n"
 
-    return result;
+    return result
 
 
 def create_label_parser():
@@ -357,6 +445,11 @@ def assemble(fileIn, fileOut):
     for l, v in labels.items():
         print("0x%08x: %s" % (v, l))
 
+    # write output file
+    with open(fileOut, 'w') as f:
+        f.write(generate_output(statements, labels))
+
+
 if __name__ == '__main__':
     import sys
 
@@ -368,4 +461,6 @@ if __name__ == '__main__':
         assemble(sys.argv[1], sys.argv[2])
     except Exception as e:
         print("Error occurred while assembling: %s" % str(e))
+        import traceback
+        traceback.print_exc(file=sys.stdout)
         sys.exit(-1)
