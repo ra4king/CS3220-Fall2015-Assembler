@@ -35,8 +35,8 @@ REGISTERS["FP"] = REGISTERS["R13"]
 REGISTERS["SP"] = REGISTERS["R14"]
 REGISTERS["RA"] = REGISTERS["R15"]
 
-print("System registers: \n  %s" % "\n  ".join(sorted(["%s: %d" % (r, n) for r, n in REGISTERS.items()])))
-print
+# print("System registers: \n  %s" % "\n  ".join(sorted(["%s: %d" % (r, n) for r, n in REGISTERS.items()])))
+# print()
 
 
 # Superclass for Instruction and 
@@ -63,7 +63,7 @@ class Statement:
 
 class Label(Statement):
     def __init__(self, label):
-        super(Label, self).__init__()
+        super().__init__()
         self._label = label
 
     @property
@@ -71,7 +71,7 @@ class Label(Statement):
         return self._label
 
     def __str__(self):
-        return "%08x Label(%s)" % (self.word_address, self._label)
+        return "Label(%s)" % self._label
 
     def __repr__(self):
         return __str__(self)
@@ -79,7 +79,7 @@ class Label(Statement):
 # Abstract superclass for the different instruction types.
 class Instruction(Statement):
     def __init__(self, op, args=[]):
-        super(Instruction, self).__init__()
+        super().__init__()
         self._op = op
         self._args = args
 
@@ -92,7 +92,7 @@ class Instruction(Statement):
         return self._args
 
     def __str__(self):
-        return "%08x: %-20s (%5s: %s)" % (self.word_address, self.__class__.__name__, self.op, str(self.args))
+        return "0x%08x: %-20s (%5s: %s)" % (self.word_address, self.__class__.__name__, self.op, str(self.args))
 
     def __repr__(self):
         return str(self)
@@ -342,11 +342,14 @@ def assemble(fileIn, fileOut):
 
     statements, labels = assign_addresses(statements)
 
+    print("\nStatements:")
     for s in statements:
-        print(s)
+        print(str(s))
+
+    print("\nLabels:")
 
     for l, v in labels.items():
-        print("%08x: %s" % (int(v, 0), l))
+        print("0x%08x: %s" % (int(v, 0), l))
 
 if __name__ == '__main__':
     import sys
