@@ -250,7 +250,10 @@ CONTENT BEGIN\n"""
 
     def emit_deadspace(start, end):
         nonlocal result
-        result += "[%08x..%08x] DEAD;\n" % (start, end)
+        if start == end:
+            result += "%08x : DEAD;\n" % start
+        else:
+            result += "[%08x..%08x] : DEAD;\n" % (start, end)
 
 
     prev_addr = None
