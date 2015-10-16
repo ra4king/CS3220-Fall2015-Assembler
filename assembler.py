@@ -220,6 +220,9 @@ class InstructionReg2Imm(Instruction):
         if imm[0:2] == '0x':
             imm = imm[2:].zfill(4)
         else:
+            if imm not in labels:
+                raise Exception("Nonexistent label used '%s' at instruction '%s'" % (imm, self.statement))
+
             val = labels[imm]
             if self.op in PC_RELATIVE_INSTRUCTIONS: val -= self.word_address + 1
             imm = int2hex(val & 0xffffffff, 4)
@@ -232,6 +235,9 @@ class InstructionRegImm(Instruction):
         if imm[0:2] == '0x':
             imm = imm[2:].zfill(8)
         else:
+            if imm not in labels:
+                raise Exception("Nonexistent label used '%s' at instruction '%s'" % (imm, self.statement))
+            
             val = labels[imm]
             if self.op in PC_RELATIVE_INSTRUCTIONS: val -= self.word_address + 1
             imm = int2hex(val & 0xffffffff, 8)
