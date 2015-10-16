@@ -232,12 +232,12 @@ class InstructionRegImm(Instruction):
     def generate_iword(self, labels):
         imm = self.args[1]
         if imm[0:2] == '0x':
-            imm = imm[2:].zfill(4)
+            imm = imm[2:].zfill(8)
         else:
             val = labels[imm]
             if self.op in PC_RELATIVE_INSTRUCTIONS: val -= self.word_address + 1
             val = val & 0xffffffff
-            imm = int2hex(val, 4)
+            imm = int2hex(val, 8)
         return reg2hex(self.args[0]) + '0' + (imm[0:4] if self.op == 'MVHI' else imm[-4:]) + OPCODES[self.op]
 
 # # InstructionImm       - BR imm
