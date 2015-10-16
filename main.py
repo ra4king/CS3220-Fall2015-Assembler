@@ -223,6 +223,7 @@ class InstructionReg2Imm(Instruction):
         else:
             val = labels[imm]
             if self.op in PC_RELATIVE_INSTRUCTIONS: val -= self.word_address + 1
+            val = val & 0xffffffff
             imm = int2hex(val, 4)
         return ''.join([reg2hex(args[i]) for i in range(2)]) + imm[-4:] + OPCODES[self.op]
 
@@ -235,6 +236,7 @@ class InstructionRegImm(Instruction):
         else:
             val = labels[imm]
             if self.op in PC_RELATIVE_INSTRUCTIONS: val -= self.word_address + 1
+            val = val & 0xffffffff
             imm = int2hex(val, 4)
         return reg2hex(self.args[0]) + '0' + (imm[0:4] if self.op == 'MVHI' else imm[-4:]) + OPCODES[self.op]
 
