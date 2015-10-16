@@ -219,7 +219,7 @@ class InstructionReg2Imm(Instruction):
 
         imm = self.args[2]
         if imm[0:2] == '0x':
-            imm = imm[2:].zfill(4)[-4:]
+            imm = imm[2:].zfill(4)
         else:
             val = labels[imm]
             if self.op in PC_RELATIVE_INSTRUCTIONS: val -= self.word_address + 1
@@ -231,7 +231,7 @@ class InstructionRegImm(Instruction):
     def generate_iword(self, labels):
         imm = self.args[1]
         if imm[0:2] == '0x':
-            imm = imm[2:].zfill(4)[-4:]
+            imm = imm[2:].zfill(4)
         else:
             val = labels[imm]
             if self.op in PC_RELATIVE_INSTRUCTIONS: val -= self.word_address + 1
