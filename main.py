@@ -35,8 +35,8 @@ REGISTERS["FP"] = REGISTERS["R13"]
 REGISTERS["SP"] = REGISTERS["R14"]
 REGISTERS["RA"] = REGISTERS["R15"]
 
-print("System registers: \n  %s" % "\n  ".join(sorted(["%s: %d" % (r, n) for r, n in REGISTERS.items()])))
-print
+# print("System registers: \n  %s" % "\n  ".join(sorted(["%s: %d" % (r, n) for r, n in REGISTERS.items()])))
+# print()
 
 
 # Superclass for Instruction and 
@@ -63,7 +63,7 @@ class Statement:
 
 class Label(Statement):
     def __init__(self, label):
-        super(Label, self).__init__()
+        super().__init__()
         self._label = label
 
     @property
@@ -191,7 +191,7 @@ def clean(lines):
 
 def assemble(fileIn, fileOut):
     lines = clean([l for l in open(fileIn)])
-    print(repr(lines))
+    # print(repr(lines))
 
     instr_regs_parser = create_instr_regs_parser()
     instr_addr_parser = create_instr_addr_parser()
@@ -275,9 +275,9 @@ def assemble(fileIn, fileOut):
 
         raise Exception("Error with line %d: %s" % (i, l))
 
-
+    print("Parsed Statements:")
     for s in statements:
-        print(s)
+        print("    " + str(s))
 
 if __name__ == '__main__':
     import sys
