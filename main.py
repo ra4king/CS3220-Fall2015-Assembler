@@ -71,7 +71,7 @@ class Label(Statement):
         return self._label
 
     def __str__(self):
-        return "Label(%s)" % self._label
+        return "%08x Label(%s)" % (self.word_address, self._label)
 
     def __repr__(self):
         return __str__(self)
@@ -92,7 +92,7 @@ class Instruction(Statement):
         return self._args
 
     def __str__(self):
-        return "%-20s (%5s: %s)" % (self.__class__.__name__, self.op, str(self.args))
+        return "%08x: %-20s (%5s: %s)" % (self.word_address, self.__class__.__name__, self.op, str(self.args))
 
     def __repr__(self):
         return str(self)
@@ -189,10 +189,7 @@ def clean(lines):
 
     return [l.strip() for l in lines if l.strip()]
 
-def assemble(fileIn, fileOut):
-    lines = clean([l for l in open(fileIn)])
-    print(repr(lines))
-
+def parse_statements(lines):
     instr_regs_parser = create_instr_regs_parser()
     instr_addr_parser = create_instr_addr_parser()
     instr_br_parser = create_instr_br_parser()
@@ -270,14 +267,86 @@ def assemble(fileIn, fileOut):
 
         match = re.match(r'^(RET)$', l, re.I)
         if match:
-            statements.append(InstructionReg2Imm('RET', ['R9', 'RA', '0x0']))
+            statements.append(InstructionReg2Imm('JAL', ['R9', 'RA', '0x0']))
             continue
 
         raise Exception("Error with line %d: %s" % (i, l))
 
+    return statements
+
+def expand_pseudo_ops(statements):
+    newStatements = []
+    for s in statements:
+        if isinstance(s, Instruction):
+            if s.op == 'BR':
+                newStatements.append(InstructionReg2Imm('BEQ', ['R6', 'R6', s.args[0]]))
+            elif s.op == 'NOT':
+                newStatements.append(InstructionReg3('NAND', [s.args[0], s.args[1], s.args[1]]))
+            elif s.op == 'BLE':
+                newStatements.append(InstructionReg3('LTE', ['R9', s.args[0], s.args[1]]))
+                newStatements.append(InstructionRegImm('BNEZ', ['R9', s.args[2]]))
+            elif s.op == 'BGE':
+                newStatements.append(InstructionReg3('GTE', ['R9', s.args[0], s.args[1]]))
+                newStatements.append(InstructionRegImm('BNEZ', ['R9', s.args[2]]))
+            elif s.op == 'CALL':
+                newStatements.append(InstructionReg2Imm('JAL', ['RA', s.args[0], s.args[1]]))
+            elif s.op == 'JMP':
+                newStatements.append(InstructionReg2Imm('JAL', ['R9', s.args[0], s.args[1]]))
+            else:
+                newStatements.append(s)
+        else:
+            newStatements.append(s)
+
+    return newStatements
+
+def assign_addresses(statements):
+    physical_statements = []
+    labels = {}
+
+    current_address = None
+
+    for s in statements:
+        if isinstance(s, Directive):
+            if s.op == '.ORIG':
+                current_address = int(s.args[0], 0)
+            elif s.op == '.NAME':
+                labels[s.args[0]] = s.args[1]
+            elif s.op == '.WORD':
+                if current_address == None:
+                    raise Exception("Instruction found before .ORIG %s" % str(s))
+
+                s.word_address = current_address
+                physical_statements.append(s)
+                current_address += 4
+        elif isinstance(s, Instruction):
+            if current_address == None:
+                raise Exception("Instruction found before .ORIG %s" % str(s))
+
+            s.word_address = current_address
+            physical_statements.append(s)
+            current_address += 4
+        elif isinstance(s, Label):
+            if current_address == None:
+                raise Exception("Instruction found before .ORIG %s" % str(s))
+
+            labels[s.label] = hex(current_address)
+
+    return (physical_statements, labels)
+
+def assemble(fileIn, fileOut):
+    lines = clean([l for l in open(fileIn)])
+    print(repr(lines))
+
+    statements = parse_statements(lines)
+    statements = expand_pseudo_ops(statements)
+
+    statements, labels = assign_addresses(statements)
 
     for s in statements:
         print(s)
+
+    for l, v in labels.items():
+        print("%08x: %s" % (int(v, 0), l))
 
 if __name__ == '__main__':
     import sys
