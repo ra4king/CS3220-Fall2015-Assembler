@@ -211,7 +211,6 @@ class InstructionReg3(Instruction):
         return ''.join([reg2hex(self.args[i]) for i in range(3)]) + '000' + OPCODES[self.op]
 
 # InstructionReg2Imm   - ADDI RD, RS1, imm;  LW RD, imm(RS1)
-# TODO: DON'T FORGET SW RS2, imm(RS1) is stored BACKWARDS: RS1 RS2 imm[15:0]
 class InstructionReg2Imm(Instruction):
     def generate_iword(self, labels):
         # Reorder args for SW
@@ -246,8 +245,6 @@ class InstructionImm(Instruction):
 class InstructionReg2(Instruction):
     pass
 
-
-# TODO: should this be a subclass of Statement instead?
 class Directive(Instruction):
     pass
 

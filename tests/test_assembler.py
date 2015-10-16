@@ -2,8 +2,8 @@ import unittest
 import os
 import tempfile
 
-# main assembler module
-import main
+# assembler module
+import assembler
 
 
 EXAMPLES = ['Test2', 'Sorter2']
@@ -30,7 +30,7 @@ class TestAssembler(unittest.TestCase):
             expected_outfile = os.path.join(ex_dir, outname)
 
             # Assemble!
-            main.assemble(infile, outfile)
+            assembler.assemble(infile, outfile)
 
             # Make sure that the produced code is the same as 
             with open(expected_outfile) as f:
