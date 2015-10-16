@@ -243,10 +243,29 @@ def generate_output(statements, labels={}):
 DEPTH=2048;
 ADDRESS_RADIX=HEX;
 DATA_RADIX=HEX;
-CONTENT BEGIN
-[00000000..0000000f] : DEAD;"""
+CONTENT BEGIN\n"""
 
-    result += "\n" + "\n".join([stmt.generate_output_code(labels) for stmt in statements]) + "\n"
+
+    statements.sort(key=lambda s: s.word_address)
+
+    def emit_deadspace(start, end):
+        nonlocal result
+        result += "[%08x..%08x] DEAD;\n" % (start, end)
+
+
+    prev_addr = None
+    for stmt in statements:
+        if prev_addr == None:
+            if stmt.word_address != 0:
+                emit_deadspace(0, stmt.word_address - 1)
+        elif prev_addr < stmt.word_address -1:
+            emit_deadspace(prev_addr + 1, stmt.word_address - 1)
+
+        result += stmt.generate_output_code(labels) + "\n"
+        prev_addr = stmt.word_address
+
+    emit_deadspace(prev_addr + 1, 2047)
+
     result += "END;\n"
 
     return result
