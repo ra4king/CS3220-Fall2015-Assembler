@@ -194,18 +194,15 @@ class InstructionReg3(Instruction):
 # TODO: DON'T FORGET SW RS2, imm(RS1) is stored BACKWARDS: RS1 RS2 imm[15:0]
 class InstructionReg2Imm(Instruction):
     def generate_iword(self, labels):
-        if self.op == 'SW':
-            # TODO(justin)
-            # raise NotImplementedError("Handle SW separately")
-            return "SW"
+        # Reorder args for SW
+        args = [self.args[1], self.args[0], self.args[2]] if self.op == 'SW' else self.args
+
+        imm = self.args[2]
+        if imm[0:2] == '0x':
+            imm = imm[2:].zfill(4)
         else:
-            imm = self.args[2]
-            if imm[0:2] == '0x':
-                imm = imm[2:].zfill(4)
-            else:
-                imm = int2hex(labels[imm], 4)
-            # print(self.args)
-            return ''.join([reg2hex(self.args[i]) for i in range(2)]) + imm + OPCODES[self.op]
+            imm = int2hex(labels[imm], 4)
+        return ''.join([reg2hex(args[i]) for i in range(2)]) + imm + OPCODES[self.op]
 
 # InstructionRegImm    - MVHI RD, imm
 class InstructionRegImm(Instruction):
