@@ -267,7 +267,7 @@ def parse_statements(lines):
 
         match = re.match(r'^(RET)$', l, re.I)
         if match:
-            statements.append(InstructionReg2Imm('JAL', ['R9', 'RA', '0x0']))
+            statements.append(Instruction('RET'))
             continue
 
         raise Exception("Error with line %d: %s" % (i, l))
@@ -290,6 +290,8 @@ def expand_pseudo_ops(statements):
                 newStatements.append(InstructionRegImm('BNEZ', ['R9', s.args[2]]))
             elif s.op == 'CALL':
                 newStatements.append(InstructionReg2Imm('JAL', ['RA', s.args[0], s.args[1]]))
+            elif s.op == 'RET':
+                newStatements.append(InstructionReg2Imm('JAL', ['R9', 'RA', '0x0']))
             elif s.op == 'JMP':
                 newStatements.append(InstructionReg2Imm('JAL', ['R9', s.args[0], s.args[1]]))
             else:
