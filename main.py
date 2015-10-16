@@ -178,6 +178,24 @@ OPCODES = {instr: hex(int(val.replace(' ', ''), 2))[2:].zfill(2) for instr, val 
 # print(OPCODES)
 
 
+PC_RELATIVE_INSTRUCTIONS = [
+    'BF',
+    'BEQ',
+    'BLT',
+    'BLTE',
+    'BEQZ',
+    'BLTZ',
+    'BLTEZ',
+    'BT',
+    'BNE',
+    'BGTE',
+    'BGT',
+    'BNEZ',
+    'BGTEZ',
+    'BGTZ'
+]
+
+
 # Converts register name (lower or uppercase) to an 8-bit hex string (no leading '0x')
 def reg2hex(regname):
     return int2hex(REGISTERS[regname], 1)
@@ -203,7 +221,9 @@ class InstructionReg2Imm(Instruction):
         if imm[0:2] == '0x':
             imm = imm[2:].zfill(4)
         else:
-            imm = int2hex(labels[imm], 4)
+            val = labels[imm]
+            if self.op in PC_RELATIVE_INSTRUCTIONS: val -= self.word_address + 1
+            imm = int2hex(val, 4)
         return ''.join([reg2hex(args[i]) for i in range(2)]) + imm + OPCODES[self.op]
 
 # InstructionRegImm    - MVHI RD, imm
@@ -213,7 +233,9 @@ class InstructionRegImm(Instruction):
         if imm[0:2] == '0x':
             imm = imm[2:].zfill(4)
         else:
-            imm = int2hex(labels[imm], 4)
+            val = labels[imm]
+            if self.op in PC_RELATIVE_INSTRUCTIONS: val -= self.word_address + 1
+            imm = int2hex(val, 4)
         return reg2hex(self.args[0]) + '0' + imm + OPCODES[self.op]
 
 # # InstructionImm       - BR imm
