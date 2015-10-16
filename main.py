@@ -41,8 +41,9 @@ REGISTERS["RA"] = REGISTERS["R15"]
 
 # Superclass for Instruction and 
 class Statement:
-    def __init__(self):
+    def __init__(self, statement):
         self._word_address = None
+        self._statement = statement
 
     # Word address of the statement as an int
     @property
@@ -54,6 +55,10 @@ class Statement:
             raise TypeError("Word address must be an int")
         self._word_address = value
 
+    @property
+    def statement(self):
+        return self._statement
+
     # Returns a string containing the output "mif" format.  Does not include a
     # leading or trailing newline.
     # 
@@ -62,8 +67,8 @@ class Statement:
         raise NotImplementedError()
 
 class Label(Statement):
-    def __init__(self, label):
-        super().__init__()
+    def __init__(self, statement, label):
+        super().__init__(statement)
         self._label = label
 
     @property
@@ -78,8 +83,8 @@ class Label(Statement):
 
 # Abstract superclass for the different instruction types.
 class Instruction(Statement):
-    def __init__(self, op, args=[]):
-        super().__init__()
+    def __init__(self, statement, op, args=[]):
+        super().__init__(statement)
         self._op = op
         self._args = args
 
@@ -220,7 +225,7 @@ def parse_statements(lines):
                     instrClass = InstructionReg2
                     args = [match.group(2), match.group(4)]
 
-            statements.append(instrClass(match.group(1).upper(), args))
+            statements.append(instrClass(l, match.group(1).upper(), args))
             continue
 
         match = instr_addr_parser.match(l)
@@ -237,37 +242,37 @@ def parse_statements(lines):
                 instrClass = InstructionRegImm
                 args = [match.group(6), value]
 
-            statements.append(instrClass(match.group(1).upper(), args))
+            statements.append(instrClass(l, match.group(1).upper(), args))
             continue
 
         match = instr_br_parser.match(l)
         if match:
             value = hex(int(match.group(1) or match.group(2), 0) & 0xffff) if match.group(1) or match.group(2) else match.group(3)
-            statements.append(InstructionImm('BR', [value]))
+            statements.append(InstructionImm(l, 'BR', [value]))
             continue
 
         match = label_parser.match(l)
         if match:
-            statements.append(Label(match.group(1)))
+            statements.append(Label(l, match.group(1)))
             continue
 
         match = directive_parser.match(l)
         if match:
             if match.group(1) != None or match.group(2) != None:
                 value = hex(int(match.group(1) or match.group(2), 0) & 0xffffffff)
-                statements.append(Directive('.ORIG', [value]))
+                statements.append(Directive(l, '.ORIG', [value]))
             elif match.group(3) != None or match.group(4) != None or match.group(5) != None:
                 value = hex(int(match.group(3) or match.group(4), 0) & 0xffffffff) if match.group(3) or match.group(4) else match.group(5)
-                statements.append(Directive('.WORD', [value]))
+                statements.append(Directive(l, '.WORD', [value]))
             else:
                 value = hex(int(match.group(7) or match.group(8), 0) & 0xffffffff)
-                statements.append(Directive('.NAME', [match.group(6), value]))
+                statements.append(Directive(l, '.NAME', [match.group(6), value]))
 
             continue
 
         match = re.match(r'^(RET)$', l, re.I)
         if match:
-            statements.append(Instruction('RET'))
+            statements.append(Instruction(l, 'RET'))
             continue
 
         raise Exception("Error with line %d: %s" % (i, l))
@@ -279,21 +284,21 @@ def expand_pseudo_ops(statements):
     for s in statements:
         if isinstance(s, Instruction):
             if s.op == 'BR':
-                newStatements.append(InstructionReg2Imm('BEQ', ['R6', 'R6', s.args[0]]))
+                newStatements.append(InstructionReg2Imm(s.statement, 'BEQ', ['R6', 'R6', s.args[0]]))
             elif s.op == 'NOT':
-                newStatements.append(InstructionReg3('NAND', [s.args[0], s.args[1], s.args[1]]))
+                newStatements.append(InstructionReg3(s.statement, 'NAND', [s.args[0], s.args[1], s.args[1]]))
             elif s.op == 'BLE':
-                newStatements.append(InstructionReg3('LTE', ['R9', s.args[0], s.args[1]]))
-                newStatements.append(InstructionRegImm('BNEZ', ['R9', s.args[2]]))
+                newStatements.append(InstructionReg3(s.statement, 'LTE', ['R9', s.args[0], s.args[1]]))
+                newStatements.append(InstructionRegImm(s.statement, 'BNEZ', ['R9', s.args[2]]))
             elif s.op == 'BGE':
-                newStatements.append(InstructionReg3('GTE', ['R9', s.args[0], s.args[1]]))
-                newStatements.append(InstructionRegImm('BNEZ', ['R9', s.args[2]]))
+                newStatements.append(InstructionReg3(s.statement, 'GTE', ['R9', s.args[0], s.args[1]]))
+                newStatements.append(InstructionRegImm(s.statement, 'BNEZ', ['R9', s.args[2]]))
             elif s.op == 'CALL':
-                newStatements.append(InstructionReg2Imm('JAL', ['RA', s.args[0], s.args[1]]))
+                newStatements.append(InstructionReg2Imm(s.statement, 'JAL', ['RA', s.args[0], s.args[1]]))
             elif s.op == 'RET':
-                newStatements.append(InstructionReg2Imm('JAL', ['R9', 'RA', '0x0']))
+                newStatements.append(InstructionReg2Imm(s.statement, 'JAL', ['R9', 'RA', '0x0']))
             elif s.op == 'JMP':
-                newStatements.append(InstructionReg2Imm('JAL', ['R9', s.args[0], s.args[1]]))
+                newStatements.append(InstructionReg2Imm(s.statement, 'JAL', ['R9', s.args[0], s.args[1]]))
             else:
                 newStatements.append(s)
         else:
@@ -349,7 +354,6 @@ def assemble(fileIn, fileOut):
         print(str(s))
 
     print("\nLabels:")
-
     for l, v in labels.items():
         print("0x%08x: %s" % (int(v, 0), l))
 
