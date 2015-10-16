@@ -180,7 +180,7 @@ OPCODES = {instr: hex(int(val.replace(' ', ''), 2))[2:].zfill(2) for instr, val 
 
 # Converts register name (lower or uppercase) to an 8-bit hex string (no leading '0x')
 def reg2hex(regname):
-    return int2hex(REGISTERS[regname], 2)
+    return int2hex(REGISTERS[regname], 1)
 
 
 def int2hex(val, numchars):
@@ -190,7 +190,7 @@ def int2hex(val, numchars):
 # InstructionReg3      - ADD RD, RS1, RS2
 class InstructionReg3(Instruction):
     def generate_iword(self, labels):
-        return ''.join([reg2hex(self.args[i]) for i in range(3)]) + OPCODES[self.op]
+        return ''.join([reg2hex(self.args[i]) for i in range(3)]) + '000' + OPCODES[self.op]
 
 # InstructionReg2Imm   - ADDI RD, RS1, imm;  LW RD, imm(RS1)
 # TODO: DON'T FORGET SW RS2, imm(RS1) is stored BACKWARDS: RS1 RS2 imm[15:0]
@@ -214,7 +214,7 @@ class InstructionRegImm(Instruction):
             imm = imm[2:].zfill(4)
         else:
             imm = int2hex(labels[imm], 4)
-        return reg2hex(self.args[0]) + '00' + imm + OPCODES[self.op]
+        return reg2hex(self.args[0]) + '0' + imm + OPCODES[self.op]
 
 # # InstructionImm       - BR imm
 class InstructionImm(Instruction):
