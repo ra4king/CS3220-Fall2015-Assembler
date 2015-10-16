@@ -9,5 +9,5 @@ Assembler written in python using pyparsing.
 There is a unit test file in the `tests` directory that runs the assembler on the example input files and compares them to their expected outputs.  Run the tests from the `assembler` dir with:
 
 ~~~{.sh}
-python -m nose
+nosetests
 ~~~
