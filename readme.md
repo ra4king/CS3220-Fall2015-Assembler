@@ -3,7 +3,7 @@
 
 Assembler written in Python3.
 
-Usage: python assembler.py inputFilePath outputFilePath
+Usage: `python assembler.py inputFilePath outputFilePath`
 
 
 ## Testing
