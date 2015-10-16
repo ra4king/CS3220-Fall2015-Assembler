@@ -61,11 +61,25 @@ class Statement:
     def generate_output_code(self, labels={}):
         raise NotImplementedError()
 
+class Label(Statement):
+    def __init__(self, label):
+        super(Label, self).__init__()
+        self._label = label
+
+    @property
+    def label(self):
+        return self._label
+
+    def __str__(self):
+        return "Label(%s)" % self._label
+
+    def __repr__(self):
+        return __str__(self)
 
 # Abstract superclass for the different instruction types.
 class Instruction(Statement):
     def __init__(self, op, args=[]):
-        super().__init__(self)
+        super(Instruction, self).__init__()
         self._op = op
         self._args = args
 
@@ -78,16 +92,10 @@ class Instruction(Statement):
         return self._args
 
     def __str__(self):
-        return "Instruction(%s: %s)" % (self.op, str(self.args))
+        return "%-20s (%5s: %s)" % (self.__class__.__name__, self.op, str(self.args))
 
     def __repr__(self):
         return str(self)
-
-
-# InstructionImmReg    - CALL imm(R1)
-class InstructionImmReg(Instruction):
-    def generate_output_code(self, labels):
-        raise NotImplementedError()
 
 # InstructionReg3      - ADD RD, RS1, RS2
 class InstructionReg3(Instruction):
@@ -95,7 +103,8 @@ class InstructionReg3(Instruction):
         raise NotImplementedError()
 
 # InstructionReg2Imm   - ADDI RD, RS1, imm;  LW RD, imm(RS1)
-class InstructionReg2Im(Instruction):
+# DON'T FORGET SW RS2, imm(RS1) is stored BACKWARDS: RS1 RS2 imm[15:0]
+class InstructionReg2Imm(Instruction):
     def generate_output_code(self, labels):
         raise NotImplementedError()
 
@@ -111,6 +120,10 @@ class InstructionImm(Instruction):
 
 # InstructionReg2      - NOT RD, RS
 class InstructionReg2(Instruction):
+    def generate_output_code(self, labels):
+        raise NotImplementedError()
+
+class Directive(Instruction):
     def generate_output_code(self, labels):
         raise NotImplementedError()
 
@@ -143,10 +156,10 @@ def create_label_parser():
     return re.compile(label)
 
 opcode = r'([A-Z]+)'
-reg = '(' + '|'.join(zip(*REGISTERS.items())[0]) + ')'
+reg = '(' + '|'.join(list(zip(*REGISTERS.items()))[0]) + ')'
 imm = r'(0x[0-9A-F]+)|(-?\d+)|(\w+)'
 
-# handles 3 regs, 2 regs + imm, 1 reg + imm
+# handles 3 regs, 2 regs, 2 regs + imm, 1 reg + imm
 def create_instr_regs_parser():
     instr = r'^' + opcode + r'\s+' + reg + r'(?:,\s*' + reg + r')?,\s*' + r'(?:' + reg + r'|' + imm + r')$'
     return re.compile(instr, re.I)
@@ -161,7 +174,7 @@ def create_instr_br_parser():
     return re.compile(instr, re.I)
 
 def create_directive_parser():
-    directive = r'^\s*\.(?:ORIG\s+(?:(0x[0-9a-fA-F]+)|(\d+))|WORD\s+(?:' + imm + r')|NAME\s+(\w+)\s*=\s*(?:(0x[0-9a-fA-F]+)|(-?\d+)))\s*$'
+    directive = r'^\s*\.(?:ORIG\s+(?:(0x[0-9a-fA-F]+)|(-\d+))|WORD\s+(?:' + imm + r')|NAME\s+(\w+)\s*=\s*(?:(0x[0-9a-fA-F]+)|(-?\d+)))\s*$'
     return re.compile(directive, re.I)
 
 def clean(lines):
@@ -178,7 +191,7 @@ def clean(lines):
 
 def assemble(fileIn, fileOut):
     lines = clean([l for l in open(fileIn)])
-    print repr(lines)
+    print(repr(lines))
 
     instr_regs_parser = create_instr_regs_parser()
     instr_addr_parser = create_instr_addr_parser()
@@ -186,62 +199,96 @@ def assemble(fileIn, fileOut):
     label_parser = create_label_parser()
     directive_parser = create_directive_parser()
 
-    result = []
+    statements = []
     for l, i in zip(lines, range(1, len(lines) + 1)):
         match = instr_regs_parser.match(l)
         if match:
-            result.append((0, match))
+            value = hex(int(match.group(5) or match.group(6), 0) & 0xffff) if match.group(5) or match.group(6) else match.group(7)
+
+            instrClass = None
+            args = None
+
+            if value:
+                if match.group(3):
+                    instrClass = InstructionReg2Imm
+                    args = [match.group(2), match.group(3), value]
+                else:
+                    instrClass = InstructionRegImm
+                    args = [match.group(2), value]
+            else:
+                if match.group(3):
+                    instrClass = InstructionReg3
+                    args = [match.group(2), match.group(3), match.group(4)]
+                else:
+                    instrClass = InstructionReg2
+                    args = [match.group(2), match.group(4)]
+
+            statements.append(instrClass(match.group(1).upper(), args))
             continue
 
         match = instr_addr_parser.match(l)
         if match:
-            result.append((1, match))
+            value = hex(int(match.group(3) or match.group(4), 0) & 0xffff) if match.group(3) or match.group(4) else match.group(5)
+
+            instrClass = None
+            args = None
+
+            if match.group(2):
+                instrClass = InstructionReg2Imm
+                args = [match.group(2), match.group(6), value]
+            else:
+                instrClass = InstructionRegImm
+                args = [match.group(6), value]
+
+            statements.append(instrClass(match.group(1).upper(), args))
             continue
 
         match = instr_br_parser.match(l)
         if match:
-            result.append((2, match))
+            value = hex(int(match.group(1) or match.group(2), 0) & 0xffff) if match.group(1) or match.group(2) else match.group(3)
+            statements.append(InstructionImm('BR', [value]))
             continue
 
         match = label_parser.match(l)
         if match:
-            result.append((3, match))
+            statements.append(Label(match.group(1)))
             continue
 
         match = directive_parser.match(l)
         if match:
-            result.append((4, match))
+            if match.group(1) != None or match.group(2) != None:
+                value = hex(int(match.group(1) or match.group(2), 0) & 0xffffffff)
+                statements.append(Directive('.ORIG', [value]))
+            elif match.group(3) != None or match.group(4) != None or match.group(5) != None:
+                value = hex(int(match.group(3) or match.group(4), 0) & 0xffffffff) if match.group(3) or match.group(4) else match.group(5)
+                statements.append(Directive('.WORD', [value]))
+            else:
+                value = hex(int(match.group(7) or match.group(8), 0) & 0xffffffff)
+                statements.append(Directive('.NAME', [match.group(6), value]))
+
             continue
 
         match = re.match(r'^(RET)$', l, re.I)
         if match:
-            result.append((5, match))
+            statements.append(InstructionReg2Imm('RET', ['R9', 'RA', '0x0']))
             continue
 
         raise Exception("Error with line %d: %s" % (i, l))
 
-    group_counts = [instr_regs_parser.groups, instr_addr_parser.groups, instr_br_parser.groups,
-                    label_parser.groups, directive_parser.groups, 1]
-    print "group counts:", repr(group_counts)
 
-    #instructions = list(result)
-    for i, match in result:
-        print "Type %d:" % i,
-        for i in range(1, group_counts[i] + 1):
-            if match.group(i):
-                print match.group(i),
-            print "\t",
-        print
+    for s in statements:
+        print(s)
 
 if __name__ == '__main__':
     import sys
 
     if len(sys.argv) != 3:
-        print "Usage: assembler.py inputFile outputFile"
+        print("Usage: assembler.py inputFile outputFile")
         sys.exit(-1)
 
     try:
         assemble(sys.argv[1], sys.argv[2])
     except Exception as e:
-        print "Something went wrong... ", repr(e)
+        print("Something went wrong... ")
+        raise
         sys.exit(-1)

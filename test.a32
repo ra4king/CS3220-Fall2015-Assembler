@@ -19,10 +19,10 @@ JMP COOL(R10)
 NOT R4, R4
 RET
 .ORIG 0x3000
-.ORIG 99
+.ORIG -99
 .WORD 0xcbda
-.WORD 100
+.WORD -100
 .WORD HELLO
 .NAME hello=0xffdd
-.NAME blah = 2
+.NAME blah = -2
 ret
