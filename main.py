@@ -172,8 +172,10 @@ OPCODES = {instr: hex(int(val.replace(' ', ''), 2))[2:].zfill(2) for instr, val 
 # print(OPCODES)
 
 
+# Converts register name (lower or uppercase) to an 8-bit hex string (no leading '0x')
 def reg2hex(regname):
-    return int2hex(REGISTERS[regname], 2)
+    return int2hex(REGISTERS[regname.upper()], 2)
+
 
 def int2hex(val, numchars):
     return hex(val)[2:].zfill(numchars)
