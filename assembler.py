@@ -277,7 +277,7 @@ CONTENT BEGIN\n"""
         nonlocal result
         if start == end:
             result += "%08x : DEAD;\n" % start
-        else:
+        elif start < end:
             result += "[%08x..%08x] : DEAD;\n" % (start, end)
 
 
