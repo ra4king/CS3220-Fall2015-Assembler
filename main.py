@@ -182,13 +182,14 @@ def int2hex(val, numchars):
 # InstructionReg3      - ADD RD, RS1, RS2
 class InstructionReg3(Instruction):
     def generate_iword(self, labels):
-        return ' '.join([reg2hex(self.args[i]) for i in range(3)]) + OPCODES[self.op]
+        return ''.join([reg2hex(self.args[i]) for i in range(3)]) + OPCODES[self.op]
 
 # InstructionReg2Imm   - ADDI RD, RS1, imm;  LW RD, imm(RS1)
 # TODO: DON'T FORGET SW RS2, imm(RS1) is stored BACKWARDS: RS1 RS2 imm[15:0]
 class InstructionReg2Imm(Instruction):
     def generate_iword(self, labels):
         if self.op == 'SW':
+            # TODO(justin)
             raise NotImplementedError("Handle SW separately")
         else:
             imm = self.args[2]
@@ -197,7 +198,7 @@ class InstructionReg2Imm(Instruction):
             else:
                 imm = int2hex(labels[imm], 4)
             print(self.args)
-            return ' '.join([reg2hex(self.args[i]) for i in range(2)]) + imm + OPCODES[self.op]
+            return ''.join([reg2hex(self.args[i]) for i in range(2)]) + imm + OPCODES[self.op]
 
 # InstructionRegImm    - MVHI RD, imm
 class InstructionRegImm(Instruction):
@@ -216,13 +217,6 @@ class InstructionReg2(Instruction):
 # TODO: should this be a subclass of Statement instead?
 class Directive(Instruction):
     pass
-
-
-
-# def remove_labels(statements):
-#     return [stmt for stmt in statements if not isinstance(stmt, Label)]
-
-# def read_labels()
 
 
 # Produce final output code.
