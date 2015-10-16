@@ -13,6 +13,8 @@ import re
 # Output should be big endian and be 2048 32 bit words (8192 bytes total)
 
 
+VERBOSE = False
+
 # Maps register names to their numbers
 REGISTERS = {}
 
@@ -436,20 +438,21 @@ def assign_addresses(statements):
 
 def assemble(fileIn, fileOut):
     lines = clean([l for l in open(fileIn)])
-    print(repr(lines))
+    if VERBOSE: print(repr(lines))
 
     statements = parse_statements(lines)
     statements = expand_pseudo_ops(statements)
 
     statements, labels = assign_addresses(statements)
 
-    print("\nStatements:")
-    for s in statements:
-        print(str(s))
+    if VERBOSE:
+        print("\nStatements:")
+        for s in statements:
+            print(str(s))
 
-    print("\nLabels:")
-    for l, v in labels.items():
-        print("0x%08x: %s" % (v, l))
+        print("\nLabels:")
+        for l, v in labels.items():
+            print("0x%08x: %s" % (v, l))
 
     # write output file
     with open(fileOut, 'w') as f:
