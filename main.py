@@ -94,7 +94,10 @@ class Instruction(Statement):
         raise NotImplementedError()
 
     def generate_output_code(self, labels={}):
-        return "-- comment\n" + hex(self.word_address)[2:].zfill(8) + ' : ' + self.generate_iword(labels) + ';'
+        out = "-- @ 0x" + int2hex(self.word_address, 8) + " : " + self.op + "\t" + ', '.join(self.args)
+        out += "\n"
+        out += hex(self.word_address)[2:].zfill(8) + ' : ' + self.generate_iword(labels) + ';'
+        return out
 
     @property
     def op(self):
@@ -192,20 +195,26 @@ class InstructionReg2Imm(Instruction):
     def generate_iword(self, labels):
         if self.op == 'SW':
             # TODO(justin)
-            raise NotImplementedError("Handle SW separately")
+            # raise NotImplementedError("Handle SW separately")
+            return "SW"
         else:
             imm = self.args[2]
             if imm[0:2] == '0x':
                 imm = imm[2:].zfill(4)
             else:
                 imm = int2hex(labels[imm], 4)
-            print(self.args)
+            # print(self.args)
             return ''.join([reg2hex(self.args[i]) for i in range(2)]) + imm + OPCODES[self.op]
 
 # InstructionRegImm    - MVHI RD, imm
 class InstructionRegImm(Instruction):
     def generate_iword(self, labels):
-        return reg2hex(self.args[0]) + '00' + int2hex(labels[self.args[1]], 4) + OPCODES[self.op]
+        imm = self.args[1]
+        if imm[0:2] == '0x':
+            imm = imm[2:].zfill(4)
+        else:
+            imm = int2hex(labels[imm], 4)
+        return reg2hex(self.args[0]) + '00' + imm + OPCODES[self.op]
 
 # # InstructionImm       - BR imm
 class InstructionImm(Instruction):
