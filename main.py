@@ -322,14 +322,14 @@ def assign_addresses(statements):
                 if current_address == None:
                     raise Exception(".WORD directive found before .ORIG %s" % str(s))
 
-                s.word_address = current_address
+                s.word_address = hex(current_address)
                 physical_statements.append(s)
                 current_address += 4
         elif isinstance(s, Instruction):
             if current_address == None:
                 raise Exception("Instruction found before .ORIG %s" % str(s))
 
-            s.word_address = current_address
+            s.word_address = hex(current_address)
             physical_statements.append(s)
             current_address += 4
         elif isinstance(s, Label):
