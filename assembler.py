@@ -457,6 +457,8 @@ def expand_pseudo_ops(statements):
                 newStatements.append(InstructionReg2Imm(s.statement, 'JAL', ['R9', 'RA', '0x0']))
             elif s.op == 'JMP':
                 newStatements.append(InstructionReg2Imm(s.statement, 'JAL', ['R9', s.args[0], s.args[1]]))
+            elif not isinstance(s, Directive) and s.op not in OPCODES:
+                    raise Exception("Invalid opcode %s at statement %s" % (s.op, s.statement))
             else:
                 newStatements.append(s)
         else:
