@@ -518,9 +518,11 @@ def assemble(fileIn, fileOut):
         for l, v in labels.items():
             print("0x%08x: %s" % (v, l))
 
+    output = generate_output(statements, labels)
+
     # write output file
     with open(fileOut, 'w') as f:
-        f.write(generate_output(statements, labels))
+        f.write(output)
 
 
 if __name__ == '__main__':
