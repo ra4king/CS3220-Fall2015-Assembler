@@ -196,7 +196,7 @@ PC_RELATIVE_INSTRUCTIONS = [
 ]
 
 
-# Converts register name (lower or uppercase) to an 8-bit hex string (no leading '0x')
+# Converts register name to an 4-bit hex string (no leading '0x')
 def reg2hex(regname):
     return int2hex(REGISTERS[regname], 1)
 
@@ -226,6 +226,7 @@ class InstructionReg2Imm(Instruction):
             val = labels[imm]
             if self.op in PC_RELATIVE_INSTRUCTIONS: val -= self.word_address + 1
             imm = int2hex(val & 0xffffffff, 4)
+		
         return ''.join([reg2hex(args[i]) for i in range(2)]) + imm[-4:] + OPCODES[self.op]
 
 # InstructionRegImm    - MVHI RD, imm
@@ -241,9 +242,10 @@ class InstructionRegImm(Instruction):
             val = labels[imm]
             if self.op in PC_RELATIVE_INSTRUCTIONS: val -= self.word_address + 1
             imm = int2hex(val & 0xffffffff, 8)
+		
         return reg2hex(self.args[0]) + '0' + (imm[0:4] if self.op == 'MVHI' else imm[-4:]) + OPCODES[self.op]
 
-# # InstructionImm       - BR imm
+# InstructionImm       - BR imm
 class InstructionImm(Instruction):
     pass
 
@@ -252,7 +254,11 @@ class InstructionReg2(Instruction):
     pass
 
 class Directive(Instruction):
-    pass
+    def generate_iword(self, labels):
+        if self.op == '.WORD':
+            return self.args[0][2:].zfill(8)[-8:]
+        else:
+            raise NotImplementedError()
 
 
 # Produce final output code.
@@ -300,7 +306,7 @@ CONTENT BEGIN\n"""
 
 
 def create_label_parser():
-    label = r'(\w+):'
+    label = r'^(\w+):$'
     return re.compile(label)
 
 opcode = r'([A-Z]+)'
