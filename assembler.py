@@ -205,14 +205,25 @@ def int2hex(val, numchars):
     return hex(val)[2:].zfill(numchars)
 
 
+reg3ops = ['ADD', 'SUB', 'AND', 'OR', 'XOR', 'NAND', 'NOR', 'XNOR', 'F', 'EQ', 'LT', 'LTE', 'T', 'NE', 'GTE', 'GT']
+reg2immops = ['ADDI', 'SUBI', 'ANDI', 'ORI', 'XORI', 'NANDI', 'NORI', 'XNORI', 'LW', 'SW', 'FI', 'EQ', 'LTI', 'LTEI',
+              'TI', 'NEI', 'GTEI', 'GTI', 'BF', 'BEQ', 'BLT', 'BLTE', 'BT', 'BNE', 'BGTE', 'BGT', 'JAL']
+regimmops = ['MVHI', 'BEQZ', 'BLTZ', 'BLTEZ', 'BNEZ', 'BGTEZ', 'BGTZ']
+
 # InstructionReg3      - ADD RD, RS1, RS2
 class InstructionReg3(Instruction):
     def generate_iword(self, labels):
+        if self.op not in reg3ops:
+            raise Exception("Invalid instruction usage '%s' at instruction '%s'" % (self.op, self.statement))
+
         return ''.join([reg2hex(self.args[i]) for i in range(3)]) + '000' + OPCODES[self.op]
 
 # InstructionReg2Imm   - ADDI RD, RS1, imm;  LW RD, imm(RS1)
 class InstructionReg2Imm(Instruction):
     def generate_iword(self, labels):
+        if self.op not in reg2immops:
+            raise Exception("Invalid instruction usage '%s' at instruction '%s'" % (self.op, self.statement))
+        
         # Reorder args for SW
         args = [self.args[1], self.args[0], self.args[2]] if self.op == 'SW' else self.args
 
@@ -232,6 +243,9 @@ class InstructionReg2Imm(Instruction):
 # InstructionRegImm    - MVHI RD, imm
 class InstructionRegImm(Instruction):
     def generate_iword(self, labels):
+        if self.op not in regimmops:
+            raise Exception("Invalid instruction usage '%s' at instruction '%s'" % (self.op, self.statement))
+        
         imm = self.args[1]
         if imm[0:2] == '0x':
             imm = imm[2:].zfill(8)
