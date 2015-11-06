@@ -366,6 +366,8 @@ def parse_statements(lines):
 
     statements = []
     for l, i in zip(lines, range(1, len(lines) + 1)):
+        l = ' '.join([p for p in l.split() if len(p) > 0])
+
         match = instr_regs_parser.match(l)
         if match:
             value = hex(int(match.group(5) or match.group(6), 0) & 0xffff) if match.group(5) or match.group(6) else match.group(7)
