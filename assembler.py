@@ -206,7 +206,7 @@ def int2hex(val, numchars):
 
 
 reg3ops = ['ADD', 'SUB', 'AND', 'OR', 'XOR', 'NAND', 'NOR', 'XNOR', 'F', 'EQ', 'LT', 'LTE', 'T', 'NE', 'GTE', 'GT']
-reg2immops = ['ADDI', 'SUBI', 'ANDI', 'ORI', 'XORI', 'NANDI', 'NORI', 'XNORI', 'LW', 'SW', 'FI', 'EQ', 'LTI', 'LTEI',
+reg2immops = ['ADDI', 'SUBI', 'ANDI', 'ORI', 'XORI', 'NANDI', 'NORI', 'XNORI', 'LW', 'SW', 'FI', 'EQI', 'LTI', 'LTEI',
               'TI', 'NEI', 'GTEI', 'GTI', 'BF', 'BEQ', 'BLT', 'BLTE', 'BT', 'BNE', 'BGTE', 'BGT', 'JAL']
 regimmops = ['MVHI', 'BEQZ', 'BLTZ', 'BLTEZ', 'BNEZ', 'BGTEZ', 'BGTZ']
 
